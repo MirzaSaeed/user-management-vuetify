@@ -1,32 +1,44 @@
 <template>
-  <div id="app">
-    <nav>
-      <router-link to="/">Home</router-link> |
-      <router-link to="/about">About</router-link>
-    </nav>
-    <router-view />
-  </div>
+  <v-app>
+    <v-main>
+      <router-view />
+    </v-main>
+  </v-app>
 </template>
+
+<script>
+export default {
+  name: "App",
+
+  data: () => ({
+    //
+  }),
+};
+</script>
+
+
 
 <style>
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
+  font-family: "Montserrat", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
+  color: #ffffff;
+  height: 100vh;
+  background: #232b3e;
 }
-
-nav {
-  padding: 30px;
+/* Scroll bar */
+::-webkit-scrollbar {
+  width: 10px;
 }
-
-nav a {
-  font-weight: bold;
-  color: #2c3e50;
+::-webkit-scrollbar-thumb {
+  background-color: #313847;
+  border-radius: 4px;
 }
-
-nav a.router-link-exact-active {
-  color: #42b983;
+::-webkit-scrollbar-thumb:hover {
+  background-color: #475168;
+}
+::-webkit-scrollbar-track {
+  background-color: #1a202e;
 }
 </style>
