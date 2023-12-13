@@ -35,13 +35,23 @@
       </v-btn>
     </v-breadcrumbs>
     <form
+      ref="form"
       class="body ms-3 pt-0 dashboard-form pe-3 pe-md-0 pe-sm-3 pe-lg-0"
+      lazy-validation
       @submit.prevent="onSubmit"
     >
       <h5 class="text-h5 fw-normal my-3 mb-4 text-white">Register Users</h5>
+
       <v-row
         class="row d-flex flex-column flex-md-col flex-lg-row flex-sm-column align-sm-center"
       >
+        <SnackBar
+          :text="text"
+          :snackbar.sync="snackbar"
+          :color="color"
+          :timeout="2000"
+        />
+
         <v-col class="col" cols="12" md="6" sm="12">
           <v-row class="row">
             <v-col class="col pb-0">
@@ -51,6 +61,7 @@
                 :rules="[rules.required]"
                 prepend-inner-icon="mdi-account"
                 v-model="firstName"
+                :error-messages="error ? message : null"
                 dark
                 type="text"
                 light
@@ -60,6 +71,7 @@
             <v-col class="col pb-0">
               <v-text-field
                 label="Last Name"
+                :error-messages="error ? message : null"
                 outlined
                 :rules="[rules.required]"
                 type="text"
@@ -77,6 +89,7 @@
                 label="Email Address"
                 outlined
                 :rules="[rules.required]"
+                :error-messages="error ? message : null"
                 type="email"
                 prepend-inner-icon="mdi-email"
                 v-model="email"
@@ -92,6 +105,9 @@
                 prepend-inner-icon="mdi-numeric"
                 :rules="[rules.required]"
                 v-model="age"
+                :min="0"
+                :error-messages="error ? message : null"
+                :max="125"
                 dark
                 light
                 hint="Must be a number"
@@ -104,6 +120,7 @@
             <v-col class="col">
               <v-text-field
                 label="Job Title"
+                :error-messages="error ? message : null"
                 outlined
                 :rules="[rules.required]"
                 type="text"
@@ -123,6 +140,7 @@
                 v-model="country"
                 dark
                 type="text"
+                :error-messages="error ? message : null"
                 light
                 color="#E8eaf6"
               ></v-text-field>
@@ -155,10 +173,10 @@
 
 <script>
 import SidebarList from "./SidebarList.vue";
-
+import SnackBar from "./SnackBar.vue";
 export default {
   name: "UserForm",
-  components: { SidebarList },
+  components: { SidebarList, SnackBar },
   data() {
     return {
       drawer: false,
@@ -166,6 +184,7 @@ export default {
       lastName: "",
       email: "",
       age: "",
+      error: false,
       jobTitle: "",
       country: "",
       rules: {
@@ -175,6 +194,11 @@ export default {
           typeof Number(value) === Number(value) || "Must be a number",
         emailMatch: () => `The email and password you entered don't match`,
       },
+
+      snackbar: false,
+      text: "",
+      timeout: 2000,
+      color: "",
     };
   },
   methods: {
@@ -188,11 +212,12 @@ export default {
           this.firstName === "" ||
           this.lastName === "" ||
           this.email === "" ||
-          this.age === "" ||
+          this.age === null ||
           this.jobTitle === "" ||
           this.country === ""
         ) {
-          alert("fill all the fields");
+          this.error = true;
+          this.message = "Required";
         } else {
           if (this.$store.state.users.length === 0) {
             this.$store.dispatch("addUser", {
@@ -206,12 +231,7 @@ export default {
               createdAt: new Date(),
               updatedAt: null,
             });
-            this.firstName = "";
-            this.lastName = "";
-            this.email = "";
-            this.age = "";
-            this.jobTitle = "";
-            this.country = "";
+            this.$refs.form.reset();
             this.$store.getters.getUsers;
           } else if (this.$store.state.users.length > 0) {
             let existEmail;
@@ -221,7 +241,9 @@ export default {
               }
             });
             if (existEmail === this.email) {
-              alert("User already exists");
+              this.text = "User Already exist";
+              this.snackbar = true;
+              this.color = "red";
             } else {
               const usersClone = JSON.parse(
                 JSON.stringify(this.$store.state.users)
@@ -238,13 +260,11 @@ export default {
                 createdAt: new Date(),
                 updatedAt: null,
               });
+              this.text = "User created Successfully.";
+              this.snackbar = true;
+              this.color = "#1a202e";
 
-              this.firstName = "";
-              this.lastName = "";
-              this.email = "";
-              this.age = "";
-              this.jobTitle = "";
-              this.country = "";
+              this.$refs.form.reset();
             }
           }
         }

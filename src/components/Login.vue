@@ -26,18 +26,21 @@
                 <v-text-field
                   label="Email Address"
                   outlined
-                  :rules="[Boolean(rules.required)]"
+                  :rules="[rules.required]"
                   prepend-inner-icon="mdi-email"
                   v-model="email"
                   dark
+                  :error-messages="error ? message : null"
+                  :success-messages="success ? 'Logged in successfully' : null"
                   light
+                  required
                   color="#E8eaf6"
                 ></v-text-field>
 
                 <v-text-field
                   v-model="password"
                   :append-icon="show1 ? 'mdi-eye' : 'mdi-eye-off'"
-                  :rules="[Boolean(rules.required), Boolean(rules.min)]"
+                  :rules="[rules.required, rules.min]"
                   :type="show1 ? 'text' : 'password'"
                   name="input-10-1"
                   label="Password"
@@ -45,7 +48,10 @@
                   color="#E8eaf6"
                   light
                   dark
+                  required
                   prepend-inner-icon="mdi-lock"
+                  :success-messages="success ? 'Logged in successfully' : null"
+                  :error-messages="error ? message : null"
                   @click:append="show1 = !show1"
                 ></v-text-field>
 
@@ -68,11 +74,12 @@ export default {
     return {
       show1: false,
       email: "",
+      error: false,
       password: "",
-      error: this.$store.getters.getErrors,
+      success: false,
       rules: {
-        required: (value) => !!value || "Required.",
-        // min: (v) => v.length >= 8 || "Min 8 characters",
+        required: (value) => !!value || "Required",
+        min: (v) => v.length >= 3 || "Min 3 characters",
         emailMatch: () => `The email and password you entered don't match`,
       },
     };
@@ -80,15 +87,21 @@ export default {
   methods: {
     async onSubmit() {
       if (this.email === "" || this.password === "") {
-        this.$store.dispatch("catchError", "Invalid Credentials");
+        this.error = true;
+        this.message = "Required";
       } else {
+        this.error = false;
+        this.success = true;
         const isLogin = await this.$store.dispatch("login", {
           email: this.email,
           password: this.password,
         });
-        isLogin
-          ? await this.$router.push("/dashboard")
-          : this.$store.dispatch("catchError", "User not found");
+        if (isLogin) {
+          await this.$router.push("/dashboard");
+        } else {
+          this.error = true;
+          this.message = "Invalid credentials";
+        }
       }
     },
   },

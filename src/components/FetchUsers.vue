@@ -52,65 +52,18 @@
           <v-img src="../assets/svg/no-list.svg" width="50%" alt="" />
         </div>
       </div>
-      <div class="d-flex flex-grow-1 justify-center align-center" id="no-data">
-        <v-progress-circular
-          :size="50"
-          :width="7"
-          v-if="loading"
-          color="white"
-          indeterminate
-        ></v-progress-circular>
-      </div>
-      <!-- <v-simple-table v-if="!loading && 'users.data.length > 0'">
-        <thead class="table-head">
-          <tr>
-            <th scope="col" class="text-left">Id</th>
-            <th scope="col" class="text-left">Avatar</th>
-            <th scope="col" class="text-left">First</th>
-            <th scope="col" class="text-left">Last</th>
-            <th scope="col" class="text-left">Email</th>
-            <th scope="col" class="text-left">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            class="table-body"
-            v-for="(user, index) in users?.data"
-            :key="user.id"
-          >
-            <th scope="row" class="text-left">{{ index + 1 }}</th>
-            <td class="text-left">
-              <v-avatar size="30px">
-                <img alt="Avatar" :src="user.avatar" />
-              </v-avatar>
-            </td>
-            <td class="text-left">{{ user.first_name }}</td>
-            <td class="text-left">{{ user.last_name }}</td>
-            <td class="text-left">{{ user.email }}</td>
-            <td class="text-left">
-              <v-btn
-                icon
-                depressed
-                class="btn list-button btn-sm text-info"
-                @click="viewUser(user.id)"
-              >
-                <v-icon small>mdi-eye</v-icon>
-              </v-btn>
-            </td>
-          </tr>
-        </tbody>
-      </v-simple-table> -->
 
       <!-- Table List -->
       <v-data-table
-        v-if="!loading && 'users.data.length > 0'"
         :headers="headers"
         dark
-        items-per-page="6"
+        :items-per-page="6"
         :loading="loading"
+        :options.sync="pagination"
         :items="users?.data"
-        hide-default-footer
+        no-data-text="No User Exist"
         class="elevation-1 pb-3"
+        :server-items-length="pagination.totalItems"
       >
         <template v-slot:top>
           <v-toolbar flat color="#1a202e">
@@ -132,91 +85,22 @@
           </v-btn>
         </template>
       </v-data-table>
-      <v-dialog
-        v-model="dialog"
-        transition="dialog-bottom-transition"
-        max-width="600"
-      >
-        <template v-slot:default="dialog">
-          <v-card class="mx-auto" color="#293247" dark>
-            <v-card-title>
-              <span class="text-h6 font-weight-bold">User Profile</span>
-            </v-card-title>
-            <div v-if="profileLoad" class="py-3 px-5 mx-3">
-              <v-progress-circular
-                indeterminate
-                dark
-                color="#5c72a5"
-              ></v-progress-circular>
-            </div>
-            <v-list-item class="grow mx-2" v-else>
-              <v-list-item-avatar color="grey darken-3" e>
-                <v-img
-                  class="elevation-6"
-                  :alt="user.first_name"
-                  :src="user.avatar"
-                ></v-img>
-              </v-list-item-avatar>
-
-              <v-list-item-content>
-                <v-list-item-title
-                  >{{ user.first_name }} {{ user.last_name }}</v-list-item-title
-                >
-                <v-list-item-subtitle>{{ user.email }}</v-list-item-subtitle>
-              </v-list-item-content>
-            </v-list-item>
-
-            <v-card-actions class="justify-end">
-              <v-btn text @click="dialog.value = false">Close</v-btn>
-            </v-card-actions>
-          </v-card>
-        </template>
-      </v-dialog>
-      <!-- Paggination  -->
-      <div
-        class="text-center mt-3 me-3"
-        v-if="!loading && 'users.data.length > 0'"
-      >
-        <v-row class="my-2" align="center" justify="end">
-          <span class="mr-4 grey--text">
-            Page {{ page }} of {{ users?.total_pages }}
-          </span>
-          <v-btn
-            :disabled="
-              users?.page === users?.total_pages
-                ? Boolean(page === users?.page - 1)
-                : Boolean(page)
-            "
-            icon
-            dark
-            color="#5c72a5"
-            class="mr-1"
-            @click="handlePaggination(page - 1)"
-          >
-            <v-icon>mdi-chevron-left</v-icon>
-          </v-btn>
-          <v-btn
-            :disabled="Boolean(page === users?.total_pages)"
-            icon
-            dark
-            color="#5c72a5"
-            class="ml-1"
-            @click="handlePaggination(page + 1)"
-          >
-            <v-icon>mdi-chevron-right</v-icon>
-          </v-btn>
-        </v-row>
-      </div>
+      <DialogBox
+        :dialog.sync="dialog"
+        :user="user"
+        :profileLoad="profileLoad"
+      />
     </div>
   </div>
 </template>
 
 <script>
 import { HTTP } from "../helper/http-config";
+import DialogBox from "./DialogBox.vue";
 import SidebarList from "./SidebarList.vue";
 export default {
   name: "FetchUsers",
-  components: { SidebarList },
+  components: { SidebarList, DialogBox },
 
   data() {
     return {
@@ -243,7 +127,19 @@ export default {
         { text: "Email Address", value: "email" },
         { text: "Action", value: "action" },
       ],
+      pagination: {
+        descending: true,
+        page: 1,
+        rowsPerPage: 6,
+        totalItems: 0,
+      },
     };
+  },
+  watch: {
+    pagination: {
+      handler: "handlePaginationChange",
+      deep: true,
+    },
   },
   methods: {
     async handleLogout() {
@@ -264,16 +160,22 @@ export default {
         this.profileLoad = false;
       } catch (error) {}
     },
+    async handlePaginationChange() {
+      await this.handlePaggination(this.pagination.page);
+    },
+
     async handlePaggination(pageNo) {
       try {
         this.page = pageNo;
         this.loading = true;
-        await HTTP.get(`users?page=${pageNo}`)
-          .then((res) => {
-            this.users = res.data;
-            this.page = this.users.page;
-          })
-          .catch((error) => {});
+
+        const response = await HTTP.get(`users?page=${pageNo}`);
+        this.users = response.data;
+
+        this.pagination.page = this.users.page;
+        this.pagination.rowsPerPage = this.users.per_page;
+        this.pagination.totalItems = this.users.total;
+
         this.loading = false;
       } catch (error) {
         this.loading = false;
